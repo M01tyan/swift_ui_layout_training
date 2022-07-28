@@ -1,0 +1,2 @@
+# swift_ui_layout_training
+#SwiftUIレイアウト一発勝負用リポジトリ

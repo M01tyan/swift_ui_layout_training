@@ -14,7 +14,6 @@ public struct Topic003View: View {
         if #available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *) {
             #if os(macOS)
             DepartureSignal()
-                .padding()
             #else
             if #available(watchOS 7.0, *) {
                 NavigationView {
@@ -32,7 +31,7 @@ public struct Topic003View: View {
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 struct DepartureSignal: View {
-    enum Signal: String, CaseIterable, Identifiable {
+    enum Signal: String, Equatable, Identifiable {
         /// 上の灯火から順に 消・消・緑・消 で進行信号を現示。
         case 出発進行
         /// 上の灯火から順に 黄・消・消・緑 で減速信号を現示。
@@ -45,14 +44,33 @@ struct DepartureSignal: View {
         case 出発停止
         
         var id: String { rawValue }
+
+        static var allCases: [Signal] {
+            return [.出発進行, .出発減速, .出発注意, .出発警戒, .出発停止]
+        }
+
+        var lightPattern: [SignalColor] {
+            switch self {
+            case .出発進行:
+                return [.消, .消, .緑, .消]
+            case .出発減速:
+                return [.黄, .消, .消, .緑]
+            case .出発注意:
+                return [.消, .消, .消, .黄]
+            case .出発警戒:
+                return [.黄, .消, .消, .黄]
+            case .出発停止:
+                return [.消, .赤, .消, .消]
+            }
+        }
     }
-    
+
     enum SignalColor: String, Equatable, Identifiable {
         case 黄
         case 赤
         case 緑
         case 消
-        
+
         var color: Color {
             switch self {
             case .黄:
@@ -65,11 +83,12 @@ struct DepartureSignal: View {
                 return Color.black
             }
         }
-        
+
         var id: String { rawValue }
     }
-    
-    @State var colorPickers: [SignalColor] = [.消, .消, .消, .消]
+
+    @State var signalPickers: [SignalColor] = [.消, .消, .消, .消]
+    @State var callingSignal: Signal? = nil
 
     let signalLights: [[SignalColor]] = [
         [.黄, .消],        // 灯1
@@ -77,22 +96,36 @@ struct DepartureSignal: View {
         [.緑, .消],        // 灯3
         [.緑, .黄, .消],   // 灯4
     ]
-    
+
     var body: some View {
-        List {
+        Form {
             Section {
                 VStack(alignment: .center) {
-                    ForEach (colorPickers) { picker in
+                    ForEach (signalPickers) { picker in
                         light
                             .foregroundColor(picker.color)
                     }
-                }.frame(maxWidth: .infinity)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
             }
             Section {
-                Text(call?.rawValue ?? "--------")
+                #if os(macOS)
+                Picker("指差呼称", selection: $callingSignal) {
+                    ForEach (Signal.allCases) { signal in
+                        Text(signal.rawValue).tag(Signal?.some(signal))
+                            .fixedSize()
+                    }
+                }
+                .onChange(of: callingSignal) { newCallingSignal in
+                    signalPickers = newCallingSignal?.lightPattern ?? signalPickers
+                }
+                #else
+                Text(callingSignal?.rawValue ?? "--------")
                     .font(.title)
                     .bold()
                     .frame(maxWidth: .infinity)
+                #endif
             }
             Section {
                 ForEach (0..<signalLights.count, id: \.self) { index in
@@ -100,27 +133,34 @@ struct DepartureSignal: View {
                     HStack {
                         Text("灯\(index + 1)")
                         Spacer()
-                        Picker("灯\(index + 1)", selection: $colorPickers[index]) {
+                        Picker("", selection: $signalPickers[index]) {
                             ForEach (signalColors) { signal in
                                 Text(signal.rawValue).tag(signal)
                             }
                         }
-                        .pickerStyle(.segmented)
+                        .onChange(of: signalPickers[index]) { newValue in
+                            callingSignal = call
+                        }
+                        .labelsHidden()
                         .fixedSize()
+                        #if os(iOS)
+                        .pickerStyle(.segmented)
+                        #endif
                     }
                 }
             }
         }
         .navigationTitle("出発信号機")
+        .padding()
     }
-    
+
     var light: some View {
         Image(systemName: "circle.fill")
             .font(.largeTitle)
     }
-    
+
     var call: Signal? {
-        switch colorPickers {
+        switch signalPickers {
         case [.消, .消, .緑, .消]:
             return .出発進行
         case [.黄, .消, .消, .緑]:
@@ -140,6 +180,9 @@ struct DepartureSignal: View {
 struct Topic003View_Previews: PreviewProvider {
     static var previews: some View {
         Topic003View()
-            .previewDevice("iPhone 13")
+            .previewDevice(PreviewDevice(
+                rawValue: "Mac"
+//                rawValue: "iPhone 13"
+            ))
     }
 }

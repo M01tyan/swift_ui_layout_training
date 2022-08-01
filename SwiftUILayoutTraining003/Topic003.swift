@@ -110,7 +110,7 @@ struct DepartureSignal: View {
                 .padding()
             }
             Section {
-                #if os(macOS)
+                #if os(macOS) || os(tvOS)
                 Picker("指差呼称", selection: $callingSignal) {
                     ForEach (Signal.allCases) { signal in
                         Text(signal.rawValue).tag(Signal?.some(signal))
@@ -143,7 +143,7 @@ struct DepartureSignal: View {
                         }
                         .labelsHidden()
                         .fixedSize()
-                        #if os(iOS)
+                        #if os(iOS) || os(tvOS)
                         .pickerStyle(.segmented)
                         #endif
                     }
@@ -151,7 +151,9 @@ struct DepartureSignal: View {
             }
         }
         .navigationTitle("出発信号機")
+        #if os(macOS) || os(tvOS)
         .padding()
+        #endif
     }
 
     var light: some View {
@@ -181,8 +183,10 @@ struct Topic003View_Previews: PreviewProvider {
     static var previews: some View {
         Topic003View()
             .previewDevice(PreviewDevice(
-                rawValue: "Mac"
-//                rawValue: "iPhone 13"
+//                rawValue: "Apple Watch Series 7 - 45mm"
+//                rawValue: "Apple TV 4K"
+//                rawValue: "Mac"
+                rawValue: "iPhone 13"
             ))
     }
 }
